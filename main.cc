@@ -42,23 +42,15 @@ long spawn(std::string cmd, std::vector<std::string> args)
   }
   if (res == 0) {
     fmt::print("child ok {} {}", cmd, fmt::join(args, " "));
-      // std::for_each(l.begin(), l.end(), [l.size()](const std::string& s) 
-      // {
-
-      // std::vector<char*> cstrings;
     char* cstrings[args.size() + 1];
-      // cstrings.reserve(args.size());
 
     for (size_t i = 0; i < args.size(); ++i) {
       cstrings[i] = args[i].data();
     }
     cstrings[args.size()] = nullptr;
 
-    for (size_t i = 0; i < args.size(); ++i) {
-      printf("%s ", cstrings[i]);
-    }
-      // int execres = execvpe(cmd.c_str(), cstrings, nullptr);
-    int execres = execvp(cmd.c_str(), cstrings);
+    int execres = execvpe(cmd.c_str(), cstrings, nullptr);
+      // int execres = execvp(cmd.c_str(), cstrings);
     if (execres < 0)
     {
       std::perror("execvpe failed");
@@ -90,8 +82,6 @@ std::tuple<std::string, std::vector<std::string>> bsh_read_line()
     if (cmd.size() == 0) {
       cmd = match_str;
     }
-
-    std::cout << match_str << '\n';
     args.push_back(match_str);
   }
 
@@ -127,17 +117,37 @@ int bsh_loop()
       // }
 
     int cpid = spawn(cmd, args);
-    fmt::print("st {}\n", cpid);
+
     int wstatus;
     pid_t w = waitpid(cpid, &wstatus,
                       WUNTRACED | WCONTINUED);
+    do {
+      if (w < 0) {
+        std::perror("waitpid");
+        std::exit(w);
+      }
+
+      // if (WIFEXITED(wstatus)) {
+      //   printf("exited, status=%d\n", WEXITSTATUS(wstatus));
+      // } else if (WIFSIGNALED(wstatus)) {
+      //   printf("killed by signal %d\n", WTERMSIG(wstatus));
+      // } else if (WIFSTOPPED(wstatus)) {
+      //   printf("stopped by signal %d\n", WSTOPSIG(wstatus));
+      // } else if (WIFCONTINUED(wstatus)) {
+      //   printf("continued\n");
+      // }
+
+    } while (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus));
+
     fmt::print("w {}\n", w);
   }
   return 0;
 }
 
 void handle_spawn_done(int signal) 
-{exit(signal);}
+{
+  std::exit(signal);
+}
 
 int main(int argc, char **argv)
 {
