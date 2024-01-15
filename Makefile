@@ -1,6 +1,6 @@
 CPP = g++
 
-CFLAGS = -Wall -std=c++17 -O3 -g3 -DGNU_SOURCE
+CFLAGS = -Wall -std=c++23 -O3 -g3 -D_GNU_SOURCE
 CXXFLAGS = $(CFLAGS)
 LDFLAGS = -lglfw -lrt -lm -ldl -lfmt
 
