@@ -62,18 +62,37 @@ long spawn(std::string cmd, std::vector<std::string> args)
 
   return res;
 }
-
-std::tuple<std::string, std::vector<std::string>> bsh_read_line()
+enum struct InputStatus { ok, eof, bad, fail };
+std::tuple<std::string, std::vector<std::string>, InputStatus> bsh_read_line()
 {
   std::string line;
+  std::string cmd;
+  std::vector<std::string> args;
+  InputStatus status = InputStatus::ok;
+
   std::getline(std::cin, line);
 
+  if (std::cin.bad()) {
+    status = InputStatus::bad;
+    std::cout << "cin.bad\n";
+  }
+  else if (std::cin.eof()) {
+    status = InputStatus::eof;
+    std::cout << "cin.eof\n";
+  }
+  else if (std::cin.fail()) {
+    status = InputStatus::fail;
+    std::cout << "cin.fail\n";
+  }
+
+  if (line.size() == 0) {
+    return {cmd, args, status};
+  }
+
+  fmt::print("#{}#", line);
   std::regex words_regex("[^\\s]+");
   auto words_begin = std::sregex_iterator(line.begin(), line.end(), words_regex);
   auto words_end = std::sregex_iterator();
-
-  std::string cmd;
-  std::vector<std::string> args;
 
   for (std::sregex_iterator i = words_begin; i != words_end; ++i)
   {
@@ -85,7 +104,7 @@ std::tuple<std::string, std::vector<std::string>> bsh_read_line()
     args.push_back(match_str);
   }
 
-  return {cmd, args};
+  return {cmd, args, status};
 }
 
 // std::vector<std::string> split(const std::string_view line)
@@ -104,17 +123,26 @@ std::tuple<std::string, std::vector<std::string>> bsh_read_line()
 //     return x;
 // }
 
-int bsh_loop() 
+int bsh_loop()
 {
   bool should_run = true;
 
   while (should_run) {
     fmt::print("> ");
-    auto [cmd, args] = bsh_read_line();
+    auto [cmd, args, status] = bsh_read_line();
     fmt::print("cmd: {} {}\n", cmd, fmt::join(args, " "));
       // for (const auto& word : split(l)) {
       //   fmt::print("{}\n", word);
       // }
+
+    if (status == InputStatus::eof) {
+      should_run = false;
+      continue;
+    }
+
+    if (cmd.size() == 0) {
+      continue;
+    }
 
     int cpid = spawn(cmd, args);
 
@@ -144,7 +172,7 @@ int bsh_loop()
   return 0;
 }
 
-void handle_spawn_done(int signal) 
+void handle_spawn_done(int signal)
 {
   std::exit(signal);
 }
