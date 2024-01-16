@@ -38,10 +38,9 @@ long spawn(std::string cmd, std::vector<std::string> args)
 
   long res = syscall(SYS_clone3, &cargs, sizeof(cargs));
   if (res < 0) {
-    std::perror("");
+    std::perror("clone3");
   }
   if (res == 0) {
-    fmt::print("child ok {} {}", cmd, fmt::join(args, " "));
     char* cstrings[args.size() + 1];
 
     for (size_t i = 0; i < args.size(); ++i) {
@@ -50,19 +49,17 @@ long spawn(std::string cmd, std::vector<std::string> args)
     cstrings[args.size()] = nullptr;
 
     int execres = execvpe(cmd.c_str(), cstrings, nullptr);
-      // int execres = execvp(cmd.c_str(), cstrings);
     if (execres < 0)
     {
-      std::perror("execvpe failed");
+      std::perror("execvpe");
     }
-  }
-  if (res > 0) {
-    fmt::print("got pid {}\n", res);
   }
 
   return res;
 }
+
 enum struct InputStatus { ok, eof, bad, fail };
+
 std::tuple<std::string, std::vector<std::string>, InputStatus> bsh_read_line()
 {
   std::string line;
@@ -74,22 +71,18 @@ std::tuple<std::string, std::vector<std::string>, InputStatus> bsh_read_line()
 
   if (std::cin.bad()) {
     status = InputStatus::bad;
-    std::cout << "cin.bad\n";
   }
   else if (std::cin.eof()) {
     status = InputStatus::eof;
-    std::cout << "cin.eof\n";
   }
   else if (std::cin.fail()) {
     status = InputStatus::fail;
-    std::cout << "cin.fail\n";
   }
 
   if (line.size() == 0) {
     return {cmd, args, status};
   }
 
-  fmt::print("#{}#", line);
   std::regex words_regex("[^\\s]+");
   auto words_begin = std::sregex_iterator(line.begin(), line.end(), words_regex);
   auto words_end = std::sregex_iterator();
@@ -130,10 +123,6 @@ int bsh_loop()
   while (should_run) {
     fmt::print("> ");
     auto [cmd, args, status] = bsh_read_line();
-    fmt::print("cmd: {} {}\n", cmd, fmt::join(args, " "));
-      // for (const auto& word : split(l)) {
-      //   fmt::print("{}\n", word);
-      // }
 
     if (status == InputStatus::eof) {
       should_run = false;
@@ -166,8 +155,6 @@ int bsh_loop()
       // }
 
     } while (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus));
-
-    fmt::print("w {}\n", w);
   }
   return 0;
 }
