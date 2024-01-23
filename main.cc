@@ -1,3 +1,4 @@
+#include <cwctype>
 #include <cerrno>
 #include <csignal>
 #include <cstdint>
@@ -20,6 +21,9 @@
 #include <vector>
 
 #include <fmt/format.h>
+#include <fmt/xchar.h>
+
+#include "termctl.h"
 
 #define ptr_to_u64(ptr) ((__u64)((uintptr_t)(ptr)))
 
@@ -60,7 +64,25 @@ long spawn(std::string cmd, std::vector<std::string> args)
 
 enum struct InputStatus { ok, eof, bad, fail };
 
-std::tuple<std::string, std::vector<std::string>, InputStatus> bsh_read_line()
+std::tuple<std::string, std::vector<std::string>, InputStatus> bsh_read()
+{
+  wint_t c;
+  bool keep_reading = true;
+
+  while (keep_reading) {
+    c = std::fgetwc(stdin);
+    if (std::iswcntrl(c)) {
+      fmt::print("{}", c);
+      keep_reading = false;
+    }
+    else {
+      fmt::print("{:d} {:c}", c, c);
+    }
+
+  }
+}
+
+std::tuple<std::string, std::vector<std::string>, InputStatus> bsh_readline()
 {
   std::string line;
   std::string cmd;
@@ -100,29 +122,16 @@ std::tuple<std::string, std::vector<std::string>, InputStatus> bsh_read_line()
   return {cmd, args, status};
 }
 
-// std::vector<std::string> split(const std::string_view line)
-// {
-//     using std::operator""sv;
-//     constexpr std::string_view delim{" "sv};
-//     std::vector<std::string> x;
-
-//     for (const auto word : std::views::split(line, delim)) {
-//         // with string_view's C++23 range constructor:
-//       x.push_back(word);
-//         //std::cout << std::quoted(std::string_view(word)) << ' ';
-//     }
-
-//     std::cout << '\n';
-//     return x;
-// }
-
 int bsh_loop()
 {
   bool should_run = true;
+  termctl tc;
+
+  tc.enableRawMode();
 
   while (should_run) {
     fmt::print("> ");
-    auto [cmd, args, status] = bsh_read_line();
+    auto [cmd, args, status] = bsh_read();
 
     if (status == InputStatus::eof) {
       should_run = false;
@@ -141,31 +150,25 @@ int bsh_loop()
     do {
       if (w < 0) {
         std::perror("waitpid");
-        std::exit(w);
+        should_run = false;
       }
-
-      // if (WIFEXITED(wstatus)) {
-      //   printf("exited, status=%d\n", WEXITSTATUS(wstatus));
-      // } else if (WIFSIGNALED(wstatus)) {
-      //   printf("killed by signal %d\n", WTERMSIG(wstatus));
-      // } else if (WIFSTOPPED(wstatus)) {
-      //   printf("stopped by signal %d\n", WSTOPSIG(wstatus));
-      // } else if (WIFCONTINUED(wstatus)) {
-      //   printf("continued\n");
-      // }
 
     } while (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus));
   }
+
+  tc.disableRawMode();
+
   return 0;
 }
 
-void handle_spawn_done(int signal)
+void handle_signal(int signal)
 {
+  fmt::print("Received signal {}\n", signal);
   std::exit(signal);
 }
 
 int main(int argc, char **argv)
 {
-  std::signal(SIGINT, handle_spawn_done);
+  std::signal(SIGINT, handle_signal);
   return bsh_loop();
 }
