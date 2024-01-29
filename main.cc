@@ -24,8 +24,19 @@
 #include <fmt/xchar.h>
 
 #include "termctl.h"
+#include "xdg.h"
 
 #define ptr_to_u64(ptr) ((__u64)((uintptr_t)(ptr)))
+
+void print_env()
+{
+  extern char** environ;
+
+  for (char** env = environ; *env != 0; ++env)
+  {
+    fmt::print("{}\n", *env);
+  }
+}
 
 long spawn(std::string cmd, std::vector<std::string> args)
 {
@@ -66,6 +77,11 @@ enum struct InputStatus { ok, eof, bad, fail };
 
 std::tuple<std::string, std::vector<std::string>, InputStatus> bsh_read()
 {
+  std::string line;
+  std::string cmd;
+  std::vector<std::string> args;
+  InputStatus status = InputStatus::ok;
+
   wint_t c;
   bool keep_reading = true;
 
@@ -80,6 +96,7 @@ std::tuple<std::string, std::vector<std::string>, InputStatus> bsh_read()
     }
 
   }
+  return {cmd, args, status};
 }
 
 std::tuple<std::string, std::vector<std::string>, InputStatus> bsh_readline()
@@ -126,12 +143,16 @@ int bsh_loop()
 {
   bool should_run = true;
   termctl tc;
+  xdg xdg;
+
+  xdg.print_env();
 
   tc.enableRawMode();
 
   while (should_run) {
     fmt::print("> ");
-    auto [cmd, args, status] = bsh_read();
+      // auto [cmd, args, status] = bsh_read();
+    auto [cmd, args, status] = bsh_readline();
 
     if (status == InputStatus::eof) {
       should_run = false;
@@ -142,6 +163,11 @@ int bsh_loop()
       continue;
     }
 
+    if (cmd == "env") {
+      print_env();
+      continue;
+    }
+    
     int cpid = spawn(cmd, args);
 
     int wstatus;
@@ -167,7 +193,7 @@ void handle_signal(int signal)
   std::exit(signal);
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
   std::signal(SIGINT, handle_signal);
   return bsh_loop();

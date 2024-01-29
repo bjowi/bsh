@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <cstdlib>
 #include <unistd.h>
 
@@ -5,13 +6,22 @@
 
 void termctl::disableRawMode()
 {
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+  int res = tcsetattr(STDIN_FILENO, TCSAFLUSH, &this->orig_termios);
+  if (res < 0) {
+    std::perror("tcsetattr");
+  }
 }
 
 void termctl::enableRawMode() {
-  tcgetattr(STDIN_FILENO, &orig_termios);
+  int res = tcgetattr(STDIN_FILENO, &this->orig_termios);
+  if (res < 0) {
+    std::perror("tcgetattr");
+  }
 
   struct termios raw = orig_termios;
   raw.c_lflag &= ~(ECHO | ICANON);
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+  res = tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+  if (res < 0) {
+    std::perror("tcgetattr 2");
+  }
 }

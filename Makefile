@@ -5,12 +5,14 @@ CXXFLAGS = $(CFLAGS)
 LDFLAGS = -lglfw -lrt -lm -ldl -lfmt
 
 #.PHONY: test clean
+O_FILES = termctl.o xdg.o main.o
 
-bsh: termctl.o main.o
-	$(CPP) $(CXXFLAGS) -o bsh termctl.o main.o $(LDFLAGS)
+bsh: $(O_FILES)
+	$(CPP) $(CXXFLAGS) -o bsh $(O_FILES) $(LDFLAGS)
 
 clean:
 	rm -f main.o bsh
 
 termctl.o: termctl.cc termctl.h
+xdg.o: xdg.cc xdg.h
 main.o: main.cc
