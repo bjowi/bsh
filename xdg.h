@@ -37,4 +37,7 @@ struct xdg
   void print_env();
 
   std::unordered_map<std::string, std::string> xdg_env;
+
+private:
+  void create_default_directories();
 };

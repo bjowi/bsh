@@ -88,11 +88,12 @@ std::tuple<std::string, std::vector<std::string>, InputStatus> bsh_read()
   while (keep_reading) {
     c = std::fgetwc(stdin);
     if (std::iswcntrl(c)) {
-      fmt::print("{}", c);
+      fmt::print("ctrl {}", c);
       keep_reading = false;
     }
     else {
-      fmt::print("{:d} {:c}", c, c);
+      c = std::fputwc((wchar_t)c, stdin);
+        // fmt::print("{:d} {:c}", c, c);
     }
 
   }
@@ -151,8 +152,8 @@ int bsh_loop()
 
   while (should_run) {
     fmt::print("> ");
-      // auto [cmd, args, status] = bsh_read();
-    auto [cmd, args, status] = bsh_readline();
+    auto [cmd, args, status] = bsh_read();
+      // auto [cmd, args, status] = bsh_readline();
 
     if (status == InputStatus::eof) {
       should_run = false;
