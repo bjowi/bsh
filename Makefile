@@ -1,6 +1,7 @@
 CPP = g++
 
-CFLAGS = -Wall -std=c++23 -O3 -g3 -D_GNU_SOURCE
+INCLUDES = -I ./vendor/tomlplusplus
+CFLAGS = -Wall -std=c++23 -O3 -g3 -D_GNU_SOURCE  $(INCLUDES)
 CXXFLAGS = $(CFLAGS)
 LDFLAGS = -lglfw -lrt -lm -ldl -lfmt
 

@@ -1,8 +1,11 @@
 #include <cstdlib>
-#include <filesystem>
+#include <fstream>
+#include <map>
 
 // #include <figcone/figcone.h>
 #include <fmt/format.h>
+
+#include <toml.hpp>
 
 #include "xdg.h"
 
@@ -11,8 +14,10 @@ namespace fs = std::filesystem;
 xdg::xdg()
 {
   this->load_all_xdg_env();
-  this->find_config_file();
-    // this->create_default_directories();
+  bool t = this->find_config_file();
+  fmt::print("path {}\n", t);
+
+  this->read_or_create_config();
 }
 
 int xdg::load_all_xdg_env()
@@ -26,25 +31,32 @@ int xdg::load_all_xdg_env()
   return 0;
 }
 
-void xdg::create_default_directories()
-// make all standard directories.
-// might be a bit messy creating dirs even if they are not needed?
+bool xdg::find_config_file()
 {
   if (this->xdg_env.contains("XDG_CONFIG_HOME"))
   {
-    fs::create_directories(fs::path(xdg_env["XDG_CONFIG_HOME"]) / "bsh");
+    this->config_path = fs::path(xdg_env["XDG_CONFIG_HOME"]) / "bsh" / "config";
   }
   else if (this->xdg_env.contains("HOME"))
   {
-    fs::create_directories(fs::path(xdg_env["HOME"]) / ".config" / "bsh");
+    this->config_path = fs::path(xdg_env["HOME"]) / ".config" / "bsh" / "config";
   }
   else if (this->xdg_env.contains("USER"))
   {
-    fs::create_directories("/home" / fs::path(xdg_env["USER"]) / ".config" / "bsh");
+    this->config_path = "/home" / fs::path(xdg_env["USER"]) / ".config" / "bsh" / "config";
   }
   else
   {
-    fs::create_directories(fs::path(".config") / "bsh");
+    this->config_path = fs::path(".config") / "bsh" / "config";
+  }
+
+  if (fs::is_regular_file(config_path)) {
+    return true;
+  }
+  else {
+    fs::create_directories(this->config_path.parent_path());
+
+    return false;
   }
 }
 
@@ -60,9 +72,31 @@ void xdg::print_env()
   }
 }
 
-// std::map read_or_create_config()
-// {
-//     // assumes xdg-env is loaded
+bool xdg::read_or_create_config()
+{
+    // assumes xdg-env is loaded
+  if (fs::is_regular_file(this->config_path)) {
+    // std::ifstream config_file(this->config_path, std::ios_base::ate);
+    // const auto size = config_file.tellg();
+    // std::string str(size, '\0'); // construct string to stream size
+    // config_file.seekg(0);
+    // if (config_file.read(&str[0], size)) {
+    //   fmt::print("config {}\n", str);
+    // }
+    try
+    {
+      const auto config = toml::parse_file(this->config_path.string());
+    }
+    catch (const toml::parse_error& err)
+    {
+      fmt::print("Failed to parse config file {}:\n\t{}\n",
+                 this->config_path.string(),
+                 err.description());
+    }
+  }
+  else {
+    return false;
+  }
 
-//   fs::path configfile = self->xdg_env;
-// }
+  return true;
+}

@@ -1,8 +1,9 @@
 #pragma once
 
+#include <filesystem>
+#include <set>
 #include <string>
 #include <unordered_map>
-#include <set>
 
 const std::set<std::string> well_known_env_vars
 {
@@ -35,9 +36,13 @@ struct xdg
 
   int load_all_xdg_env();
   void print_env();
+  bool find_config_file();
+  bool read_or_create_config();
 
   std::unordered_map<std::string, std::string> xdg_env;
 
 private:
   void create_default_directories();
+
+  std::filesystem::path config_path;
 };
